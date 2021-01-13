@@ -53,4 +53,8 @@ public class Vector2D {
     public static Vector2D operator +(Vector2D self, UnityEngine.Vector2 value) {
         return new Vector2D(self.x + value.x, self.y + value.y);
     }
+
+    public double Distance(Vector2D vector2D) {
+        return System.Math.Sqrt((x - vector2D.x) * (x - vector2D.x) + (y - vector2D.y) * (y - vector2D.y));
+    }
 }

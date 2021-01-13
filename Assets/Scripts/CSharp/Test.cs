@@ -1,4 +1,4 @@
-﻿using Shujun.LBSMap;
+﻿using Achonor.LBSMap;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -15,8 +15,13 @@ public class Test : MonoBehaviour
     }
 
     private void Start() {
-        mMapServices.SetZoomLevel(19);
-        mMapServices.SetMapCenter(new Vector2D(-180, 74));
+        print(MapFunction.GetTileURL(new Vector2D(112.966696, 28.171502), 21));
+        print(MapFunction.GetTileURL(new Vector2D(112.966696, 28.171502), 20));
+        print(MapFunction.GetTileURL(new Vector2D(112.966696, 28.171502), 19));
+        print(MapFunction.GetTileURL(new Vector2D(112.966696, 28.171502), 3));
+
+        mMapServices.SetZoomLevel(16);
+        mMapServices.SetMapCenter(new Vector2D(112.966696, 28.171502));
         mMapServices.DoRender();
     }
 }

@@ -1,12 +1,20 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace Shujun.LBSMap {
+namespace Achonor.LBSMap {
     public static class MathCommon
     {
         public static bool FloatIsEqual(this float value1, float value2) {
-            if (Mathf.Abs(value1 - value2) <= 1e-8) {
+            if (Math.Abs(value1 - value2) <= 1e-8) {
+                return true;
+            }
+            return false;
+        }
+
+        public static bool DoubleIsEqual(this double value1, double value2) {
+            if (Math.Abs(value1 - value2) <= 1e-8) {
                 return true;
             }
             return false;

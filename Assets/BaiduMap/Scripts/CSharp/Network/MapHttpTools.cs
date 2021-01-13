@@ -3,10 +3,10 @@ using System.Collections;
 using UnityEngine;
 using UnityEngine.Networking;
 
-namespace Shujun.LBSMap
+namespace Achonor.LBSMap
 {
-    public class MapHttpTools {
-        public IEnumerator Request<T>(string url, Action<T> callback, int retryCount) where T : DownloadHandler , new() {
+    public static class MapHttpTools {
+        public static IEnumerator Request<T>(string url, Action<T> callback, int retryCount) where T : DownloadHandler , new() {
             using (UnityWebRequest www = UnityWebRequest.Get(url)) {
                 www.downloadHandler = new T();
                 WWWForm wWWForm = new WWWForm();
@@ -23,6 +23,12 @@ namespace Shujun.LBSMap
                     callback?.Invoke((T)www.downloadHandler);
                 }
             }
+        }
+
+        public static IEnumerator RequestSprite(string url, Action<Sprite> callback, int retryCount) {
+            yield return Request<DownloadHandlerTexture>(url, (down) => {
+                callback.Invoke(MapUtils.Texture2D2Sprite(down.texture));
+            }, retryCount);
         }
     }
 }
