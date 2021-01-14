@@ -14,6 +14,8 @@ namespace Achonor.LBSMap {
 
         private TileData mTileData = null;
 
+        private MapType mMapType = MapType.Street;
+
         public string Key {
             get {
                 return mTileData.Key;
@@ -36,15 +38,16 @@ namespace Achonor.LBSMap {
             StopAllCoroutines();
         }
 
-        public void Init(TileData tileData) {
+        public void Init(TileData tileData, MapType mapType) {
             gameObject.SetActive(true);
-            if (null != mTileData && tileData.Key == mTileData.Key) {
+            if (mapType == mMapType && null != mTileData && tileData.Key == mTileData.Key) {
                 if (null != mSpriteRender.sprite) {
                     return;
                 }
             }
             mSpriteRender.sprite = null;
             mTileData = tileData;
+            mMapType = mapType;
             StopAllCoroutines();
             //缩放比例
             transform.localScale = mTileData.GetTileScale() * Vector3.one;
@@ -57,9 +60,11 @@ namespace Achonor.LBSMap {
                 return;
             }
             //下载瓦片地图
-            StartCoroutine(MapHttpTools.RequestSprite(mTileData.GetTileURL(), (sprite) => {
+            MapType curMapType = mMapType;
+            string fileName = string.Format("{0}_{1}.png", mTileData.Key, (int)curMapType);
+            StartCoroutine(MapHttpTools.RequestSprite(mTileData.GetTileURL(curMapType), (sprite) => {
                 mSpriteRender.sprite = sprite;
-            }, mTileData.Key, 2));
+            }, fileName, 2));
         }
     }
 }

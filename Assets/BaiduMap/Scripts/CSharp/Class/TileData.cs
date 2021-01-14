@@ -19,7 +19,7 @@ namespace Achonor.LBSMap {
 
         public string Key {
             get {
-                return string.Format("{0}|{1}|{2}", zoom, tile.x, tile.y);
+                return string.Format("{0}x{1}x{2}", zoom, tile.x, tile.y);
             }
         }
 

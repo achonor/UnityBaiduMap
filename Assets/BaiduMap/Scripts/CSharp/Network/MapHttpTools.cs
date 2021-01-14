@@ -33,8 +33,7 @@ namespace Achonor.LBSMap
         }
 
         public static IEnumerator RequestSprite(string url, Action<Sprite> callback, string fileName, int retryCount) {
-            fileName = fileName.Replace("|", "x");
-            string filePath = Path.Combine(MapTileCachePath, fileName + ".png");
+            string filePath = Path.Combine(MapTileCachePath, fileName);
             if (File.Exists(filePath)) {
                 url = "file://" + filePath;
             }

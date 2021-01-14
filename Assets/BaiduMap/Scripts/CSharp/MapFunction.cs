@@ -8,8 +8,11 @@ namespace Achonor.LBSMap {
 
     public static class MapFunction {
 
-        //public const string MapUrlSrc = "http://online2.map.bdimg.com/onlinelabel/?qt=tile&x={0}&y={1}&z={2}";
-        public const string MapUrlSrc = "http://online5.map.bdimg.com/tile/?qt=vtile&x={0}&y={1}&z={2}&styles=pl&udt=20210114";
+        //街道图
+        //public const string MapUrlSrc_0 = "https://maponline0.bdimg.com/starpic/?qt=satepc&u=x={0};y={1};z={2};v=009;type=sate&fm=46&app=webearth2&v=009&udt=20210112";
+        public const string MapUrlSrc_0 = "http://online5.map.bdimg.com/tile/?qt=vtile&x={0}&y={1}&z={2}&styles=pl&udt=20210114";
+        //卫星图
+        public const string MapUrlSrc_1 = "http://shangetu3.map.bdimg.com/it/u=x={0};y={1};z={2};v=009;type=sate&fm=46&udt=20210114";
 
 
         /// <summary>
@@ -134,9 +137,9 @@ namespace Achonor.LBSMap {
         /// <param name="lngLat">经纬度</param>
         /// <param name="zoom">缩放比例</param>
         /// <returns></returns>
-        public static string GetTileURL(this Vector2D lngLat, int zoom) {
+        public static string GetTileURL(this Vector2D lngLat, int zoom, MapType mapType) {
             TileData tileData = LngLat2Tile(lngLat, zoom);
-            return GetTileURL(tileData);
+            return GetTileURL(tileData, mapType);
         }
 
         /// <summary>
@@ -144,9 +147,14 @@ namespace Achonor.LBSMap {
         /// </summary>
         /// <param name="tile">瓦片坐标</param>
         /// <param name="zoom">缩放比例</param>
+        /// <param name="mapType">地图类型 0.街道图 1.卫星图</param>
         /// <returns></returns>
-        public static string GetTileURL(this TileData tileData) {
-            return string.Format(MapUrlSrc, tileData.tile.x, tileData.tile.y, tileData.zoom);
+        public static string GetTileURL(this TileData tileData, MapType mapType) {
+            if (MapType.Street == mapType) {
+                return string.Format(MapUrlSrc_0, tileData.tile.x, tileData.tile.y, tileData.zoom);
+            } else {
+                return string.Format(MapUrlSrc_1, tileData.tile.x, tileData.tile.y, tileData.zoom);
+            }
         }
 
         /// <summary>

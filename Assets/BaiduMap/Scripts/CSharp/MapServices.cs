@@ -14,6 +14,8 @@ namespace Achonor.LBSMap {
         [SerializeField]
         private Transform mTilePool;
 
+        private MapType mMapType;
+
         /// <summary>
         /// 显示范围
         /// </summary>
@@ -43,7 +45,7 @@ namespace Achonor.LBSMap {
         /// <summary>
         /// 最大缓存容量
         /// </summary>
-        private long mMaxChacheSize = 10 * 1024 * 1024;
+        private long mMaxChacheSize = 500 * 1024 * 1024;
 
         private void Start() {
             SetLngLatRange(mLngLatRange);
@@ -67,6 +69,17 @@ namespace Achonor.LBSMap {
             mWorldPosRange = new Rect(minVector.x, minVector.z, maxVector.x, maxVector.z);
         }
 
+        /// <summary>
+        /// 设置地图类型
+        /// </summary>
+        /// <param name="mapType"></param>
+        public void SetMapType(MapType mapType) {
+            if (mMapType == mapType) {
+                return;
+            }
+            mMapType = mapType;
+            ClearAllMapTile();
+        }
 
         /// <summary>
         /// 设置地图缩放级别
@@ -214,7 +227,7 @@ namespace Achonor.LBSMap {
             newTile.SetParent(mTileParent);
             MapTile mapTile = newTile.GetComponent<MapTile>();
             mMapTileDict.Add(tileData.Key, mapTile);
-            mapTile.Init(tileData);
+            mapTile.Init(tileData, mMapType);
             return mapTile;
         }
 
@@ -239,11 +252,28 @@ namespace Achonor.LBSMap {
             }
         }
 
+        /// <summary>
+        /// 清理所有Tile
+        /// </summary>
+        private void ClearAllMapTile() {
+            List<MapTile> needClears = new List<MapTile>();
+            foreach (MapTile mapTile in mMapTileDict.Values) {
+                needClears.Add(mapTile);
+            }
+            for (int i = 0; i < needClears.Count; i++) {
+                RemoveTile(needClears[i]);
+            }
+        }
+
         private void CheckCahcheSize() {
             long curChacheSize = 0;
+            print(MapHttpTools.MapTileCachePath);
             string cachePath = MapHttpTools.MapTileCachePath;
+            if (!Directory.Exists(cachePath)) {
+                return;
+            }
             DirectoryInfo directoryInfo = new DirectoryInfo(cachePath);
-            FileInfo[] allFiles = directoryInfo.GetFiles();
+            FileInfo[] allFiles = directoryInfo.GetFiles(); 
             print("缓存文件数量 ：" + allFiles.Length);
             for (int i = 0; i < allFiles.Length; i++) {
                 curChacheSize += allFiles[i].Length;
