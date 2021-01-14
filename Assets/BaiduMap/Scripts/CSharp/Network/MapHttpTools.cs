@@ -1,11 +1,18 @@
 ﻿using System;
 using System.Collections;
+using System.IO;
 using UnityEngine;
 using UnityEngine.Networking;
 
 namespace Achonor.LBSMap
 {
     public static class MapHttpTools {
+        public static string MapTileCachePath {
+            get {
+                return Path.Combine(Application.persistentDataPath, "MapTileCachePath");
+            }
+        }
+
         public static IEnumerator Request<T>(string url, Action<T> callback, int retryCount) where T : DownloadHandler , new() {
             using (UnityWebRequest www = UnityWebRequest.Get(url)) {
                 www.downloadHandler = new T();
@@ -25,8 +32,20 @@ namespace Achonor.LBSMap
             }
         }
 
-        public static IEnumerator RequestSprite(string url, Action<Sprite> callback, int retryCount) {
+        public static IEnumerator RequestSprite(string url, Action<Sprite> callback, string fileName, int retryCount) {
+            fileName = fileName.Replace("|", "x");
+            string filePath = Path.Combine(MapTileCachePath, fileName + ".png");
+            if (File.Exists(filePath)) {
+                url = "file://" + filePath;
+            }
             yield return Request<DownloadHandlerTexture>(url, (down) => {
+                if (!File.Exists(filePath)) {
+                    MapUtils.SaveTexture(filePath, down.texture);
+                } else {
+                    //修改访问事件
+                    FileInfo fileInfo = new FileInfo(filePath);
+                    fileInfo.LastAccessTime = DateTime.Now;
+                }
                 callback.Invoke(MapUtils.Texture2D2Sprite(down.texture));
             }, retryCount);
         }

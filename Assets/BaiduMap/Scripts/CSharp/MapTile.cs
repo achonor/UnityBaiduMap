@@ -20,6 +20,12 @@ namespace Achonor.LBSMap {
             }
         }
 
+        public TileData Data {
+            get {
+                return mTileData;
+            }
+        }
+
         private void Awake() {
             if (null == mSpriteRender) {
                 mSpriteRender = GetComponent<SpriteRenderer>();
@@ -53,7 +59,7 @@ namespace Achonor.LBSMap {
             //下载瓦片地图
             StartCoroutine(MapHttpTools.RequestSprite(mTileData.GetTileURL(), (sprite) => {
                 mSpriteRender.sprite = sprite;
-            }, 2));
+            }, mTileData.Key, 2));
         }
     }
 }

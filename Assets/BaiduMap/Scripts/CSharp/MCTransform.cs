@@ -112,11 +112,9 @@ namespace Achonor.LBSMap {
         /// </summary>
         /// <param name="vector2D">MC坐标</param>
         /// <returns></returns>
-        public static Vector2D ConvertMC2LL(Vector2D vector2D, int zoom = -1) {
-            if (-1 != zoom) {
-                vector2D.x = MathCommon.GetLoop(vector2D.x, MCRANGE[zoom][0], MCRANGE[zoom][2]);
-                vector2D.y = MathCommon.GetLoop(vector2D.y, MCRANGE[zoom][1], MCRANGE[zoom][3]);
-            }
+        public static Vector2D ConvertMC2LL(Vector2D vector2D) {
+            vector2D.x = MathCommon.GetRange(vector2D.x, -20037726.3691722, 20037726.3691722);
+            vector2D.y = MathCommon.GetRange(vector2D.y, -12474104.1741421, 12474104.1741421);
             return ConvertMC2LL(vector2D.x, vector2D.y);
         }
 

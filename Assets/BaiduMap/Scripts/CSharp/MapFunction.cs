@@ -8,16 +8,20 @@ namespace Achonor.LBSMap {
 
     public static class MapFunction {
 
-        public const string MapUrlSrc = "http://online1.map.bdimg.com/onlinelabel/?qt=tile&x={0}&y={1}&z={2}";
+        //public const string MapUrlSrc = "http://online2.map.bdimg.com/onlinelabel/?qt=tile&x={0}&y={1}&z={2}";
+        public const string MapUrlSrc = "http://online5.map.bdimg.com/tile/?qt=vtile&x={0}&y={1}&z={2}&styles=pl&udt=20210114";
 
 
         /// <summary>
         /// 定义10级Tile比例为1
+        /// 18级地图 瓦片图上1个像素等于1个MC单位（详见LngLat2Tile） 1个瓦片图是256x256
+        /// 256个MC单位等于1个Unit单位（详见LngLat2Position），18级地图1张瓦片图是1个Unit单位
+        /// 即18级地图的瓦片图上1像素是1/256个Unit单位  10级地图上1像素是1个Unit单位
         /// </summary>
         /// <param name="zoom"></param>
         /// <returns></returns>
         public static float GetTileScale(int zoom) {
-            return Mathf.Pow(2, 16 - zoom);
+            return Mathf.Pow(2, 10 - zoom);
         }
 
         /// <summary>
@@ -26,7 +30,16 @@ namespace Achonor.LBSMap {
         /// <param name="zoom"></param>
         /// <returns></returns>
         public static float GetCameraHeight(float zoom) {
-            return 10 * Mathf.Pow(2, 16 - zoom);
+            return 300 * Mathf.Pow(2, 10 - zoom);
+        }
+
+        /// <summary>
+        /// 获取相机移动距离相对屏幕的比例
+        /// </summary>
+        /// <param name="zoom"></param>
+        /// <returns></returns>
+        public static float GetCameraMoveScale(float zoom) {
+            return Mathf.Pow(2, 10 - zoom);
         }
 
 
@@ -64,6 +77,7 @@ namespace Achonor.LBSMap {
 
         /// <summary>
         /// 将tile(瓦片)坐标系转换为LngLat(地理)坐标系
+        /// 18级地图 瓦片图上1个像素等于1个MC单位
         /// </summary>
         /// <param name="tile">瓦片坐标</param>
         /// <param name="pixel">瓦片上的像素坐标</param>
@@ -74,7 +88,7 @@ namespace Achonor.LBSMap {
             vector2D.x = tileData.tile.x * 256.0 + tileData.pixel.x;
             vector2D.y = tileData.tile.y * 256.0 + tileData.pixel.y;
             vector2D /= Math.Pow(2, tileData.zoom - 18);
-            return MCTransform.ConvertMC2LL(vector2D, tileData.zoom);
+            return MCTransform.ConvertMC2LL(vector2D);
         }
 
         /// <summary>
@@ -91,13 +105,14 @@ namespace Achonor.LBSMap {
 
         /// <summary>
         /// 经纬度转坐标（x，y）
+        /// 256个MC单位对应1个Unit单位
         /// </summary>
         /// <param name="lngLat"></param>
         /// <returns></returns>
         public static Vector3 LngLat2Position(Vector2D lngLat) {
             //转换MC坐标
             Vector2D vector2D = MCTransform.ConvertLL2MC(lngLat);
-            //缩小到Unity范围内（-100000, 100000） 256MC单位对应1Unity单位
+            //缩小到Unit单位范围内（-100000, 100000） 
             return new Vector2((float)(vector2D.x / 256), (float)(vector2D.y / 256));
         }
 
@@ -108,6 +123,8 @@ namespace Achonor.LBSMap {
         /// <returns></returns>
         public static Vector2D Position2LngLat(Vector3 worldPos) {
             Vector2D vector2D = new Vector2D(worldPos.x * 256, worldPos.y * 256);
+
+
             return MCTransform.ConvertMC2LL(vector2D);
         }
 
