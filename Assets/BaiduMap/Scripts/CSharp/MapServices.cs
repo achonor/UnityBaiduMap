@@ -92,7 +92,7 @@ namespace Achonor.LBSMap {
         /// <summary>
         /// 设置地图中心经纬度
         /// </summary>
-        /// <param name="lngLat"></param>
+        /// <param name="lngLat">BD09ll坐标系</param>
         public void SetMapCenter(Vector2D lngLat) {
             mCenterLngLat = lngLat;
         }
