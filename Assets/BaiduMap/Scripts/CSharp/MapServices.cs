@@ -125,10 +125,10 @@ namespace Achonor.LBSMap {
             } else if (mWorldPosRange.width < rightUpWorldPos.x) {
                 nextCameraPos.x += mWorldPosRange.width - rightUpWorldPos.x;
             }
-            if (leftDownWorldPos.y < mWorldPosRange.y) {
-                nextCameraPos.y += mWorldPosRange.y - leftDownWorldPos.y;
-            } else if (mWorldPosRange.height < rightUpWorldPos.y) {
-                nextCameraPos.y += mWorldPosRange.height - rightUpWorldPos.y;
+            if (leftDownWorldPos.z < mWorldPosRange.y) {
+                nextCameraPos.z += mWorldPosRange.y - leftDownWorldPos.z;
+            } else if (mWorldPosRange.height < rightUpWorldPos.z) {
+                nextCameraPos.z += mWorldPosRange.height - rightUpWorldPos.z;
             }
             mMapCamera.transform.position = nextCameraPos;
             //计算中心经纬度
