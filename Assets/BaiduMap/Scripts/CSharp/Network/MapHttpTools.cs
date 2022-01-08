@@ -41,7 +41,7 @@ namespace Achonor.LBSMap
                 if (!File.Exists(filePath)) {
                     MapUtils.SaveTexture(filePath, down.texture);
                 } else {
-                    //修改访问事件
+                    //修改访问时间
                     FileInfo fileInfo = new FileInfo(filePath);
                     fileInfo.LastAccessTime = DateTime.Now;
                 }
