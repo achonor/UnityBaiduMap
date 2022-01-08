@@ -32,8 +32,8 @@ namespace Achonor.LBSMap {
         /// </summary>
         /// <param name="zoom"></param>
         /// <returns></returns>
-        public static float GetCameraHeight(float zoom) {
-            return 300 * Mathf.Pow(2, 10 - zoom);
+        public static double GetCameraHeight(float zoom) {
+            return 300 * Math.Pow(2, 10 - zoom);
         }
 
         /// <summary>

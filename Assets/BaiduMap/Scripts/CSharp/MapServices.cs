@@ -47,6 +47,18 @@ namespace Achonor.LBSMap {
         /// </summary>
         private long mMaxChacheSize = 500 * 1024 * 1024;
 
+        public Camera MapCamera {
+            get {
+                return mMapCamera;
+            }
+        }
+
+        public float MapZoomLevel {
+            get {
+                return mMapZoomLevel;
+            }
+        }
+
         private void Start() {
             SetLngLatRange(mLngLatRange);
             //检测缓存容量是否超出
@@ -109,6 +121,15 @@ namespace Achonor.LBSMap {
         /// <summary>
         /// 移动地图
         /// </summary>
+        /// <param name="x"></param>
+        /// <param name="y"></param>
+        public void MoveMap(float x, float y) {
+            MoveMap(new Vector2(x, y));
+        }
+
+        /// <summary>
+        /// 移动地图
+        /// </summary>
         /// <param name="offset">屏幕像素单位</param>
         public void MoveMap(Vector2 offset) {
             //相机位置
@@ -117,18 +138,17 @@ namespace Achonor.LBSMap {
             mMapCamera.transform.position -= worldOffset;
             //判断移动是否超出范围
             Vector3 nextCameraPos = mMapCamera.transform.position;
-            float cameraHeight = MapFunction.GetCameraHeight(mMapZoomLevel);
-            Vector3 leftDownWorldPos = mMapCamera.ScreenToWorldPoint(new Vector3(0, 0, cameraHeight));
-            Vector3 rightUpWorldPos = mMapCamera.ScreenToWorldPoint(new Vector3(Screen.width, Screen.height, cameraHeight));
+            Vector3 leftDownWorldPos = ScreenToWorldPoint(new Vector3(0, 0));
+            Vector3 rightUpWorldPos = ScreenToWorldPoint(new Vector3(Screen.width, Screen.height));
             if (leftDownWorldPos.x < mWorldPosRange.x) {
                 nextCameraPos.x += mWorldPosRange.x - leftDownWorldPos.x;
             } else if (mWorldPosRange.width < rightUpWorldPos.x) {
                 nextCameraPos.x += mWorldPosRange.width - rightUpWorldPos.x;
             }
-            if (leftDownWorldPos.z < mWorldPosRange.y) {
-                nextCameraPos.z += mWorldPosRange.y - leftDownWorldPos.z;
-            } else if (mWorldPosRange.height < rightUpWorldPos.z) {
-                nextCameraPos.z += mWorldPosRange.height - rightUpWorldPos.z;
+            if (leftDownWorldPos.y < mWorldPosRange.y) {
+                nextCameraPos.y += mWorldPosRange.y - leftDownWorldPos.y;
+            } else if (mWorldPosRange.height < rightUpWorldPos.y) {
+                nextCameraPos.y += mWorldPosRange.height - rightUpWorldPos.y;
             }
             mMapCamera.transform.position = nextCameraPos;
             //计算中心经纬度
@@ -142,12 +162,12 @@ namespace Achonor.LBSMap {
             //相机坐标
             Vector3 centerPos = LngLat2WorldPos(mCenterLngLat);
             //相机高度
-            Vector3 heightVec = new Vector3(0, MapFunction.GetCameraHeight(mMapZoomLevel), 0);
+            Vector3 heightVec = new Vector3(0, (float)MapFunction.GetCameraHeight(mMapZoomLevel), 0);
             Vector3 cameraPos = centerPos + heightVec;
             mMapCamera.transform.position = cameraPos;
             //计算相机范围
-            Vector3 leftDownWorldPos = mMapCamera.ScreenToWorldPoint(new Vector3(-0.5f * Screen.width, -0.5f * Screen.height, heightVec.y));
-            Vector3 rightUpWorldPos = mMapCamera.ScreenToWorldPoint(new Vector3(1.5f * Screen.width, 1.5f * Screen.height, heightVec.y));
+            Vector3 leftDownWorldPos = ScreenToWorldPoint(new Vector3(-0.1f * Screen.width, -0.1f * Screen.height, heightVec.y));
+            Vector3 rightUpWorldPos = ScreenToWorldPoint(new Vector3(1.1f * Screen.width, 1.1f * Screen.height, heightVec.y));
             TileData leftDownTile = WorldPos2TileData(leftDownWorldPos);
             TileData rightUpTile = WorldPos2TileData(rightUpWorldPos);
             List<TileData> allTileDatas = new List<TileData>();
@@ -185,7 +205,7 @@ namespace Achonor.LBSMap {
         /// <param name="lngLat"></param>
         /// <returns></returns>
         public Vector3 LngLat2WorldPos(Vector2D lngLat) {
-            Vector2 position = MapFunction.LngLat2Position(lngLat);
+            Vector3 position = MapFunction.LngLat2Position(lngLat);
             return mTileParent.TransformPoint(position);
         }
 
@@ -199,7 +219,82 @@ namespace Achonor.LBSMap {
             return MapFunction.Position2LngLat(position);
         }
 
-        
+        /// <summary>
+        /// 屏幕坐标转经纬度
+        /// </summary>
+        /// <param name="screenPos"></param>
+        /// <returns></returns>
+        public Vector2D ScreenPos2LngLat(Vector2 screenPos) {
+            Vector3 worldPos = ScreenToWorldPoint(screenPos);
+            return WorldPos2LngLat(worldPos);
+        }
+
+
+        /// <summary>
+        /// 经纬度转屏幕
+        /// </summary>
+        /// <param name="lngLat"></param>
+        /// <returns></returns>
+        public Vector2 LngLat2ScreenPos(Vector2D lngLat) {
+            Vector3 worldPos = LngLat2WorldPos(lngLat);
+            return WorldToScreenPoint(worldPos);
+        }
+
+        public Vector3 ScreenToWorldPoint(Vector2 screenPos) {
+            double screenX = screenPos.x;
+            double screenY = screenPos.y;
+            double screenZ = MapFunction.GetCameraHeight(mMapZoomLevel);
+            Matrix4x4 pMatrix = mMapCamera.projectionMatrix;
+
+            //反齐次除法，求出裁剪空间坐标
+            double px = screenX / Screen.width;
+            px = (px - 0.5f) * 2f;
+            double py = screenY / Screen.height;
+            py = (py - 0.5f) * 2f;
+            double pz = (-screenZ - pMatrix.m23) / pMatrix.m22;
+            double pw = screenZ;
+            px *= pw;
+            py *= pw;
+            //裁剪空间到相机空间
+            Matrix4x4 pInverseMatrix = mMapCamera.projectionMatrix.inverse;
+            double vx = (pInverseMatrix.m00 * px + pInverseMatrix.m01 * py + pInverseMatrix.m02 * pz + pInverseMatrix.m03 * pw);
+            double vy = (pInverseMatrix.m10 * px + pInverseMatrix.m11 * py + pInverseMatrix.m12 * pz + pInverseMatrix.m13 * pw);
+            double vz = (pInverseMatrix.m20 * px + pInverseMatrix.m21 * py + pInverseMatrix.m22 * pz + pInverseMatrix.m23 * pw);
+            //观察空间到世界空间
+            Matrix4x4 vInverseMatrix = mMapCamera.worldToCameraMatrix.inverse;
+            double x = (vInverseMatrix.m00 * vx + vInverseMatrix.m01 * vy + vInverseMatrix.m02 * vz + vInverseMatrix.m03 * 1);
+            double y = (vInverseMatrix.m10 * vx + vInverseMatrix.m11 * vy + vInverseMatrix.m12 * vz + vInverseMatrix.m13 * 1);
+            double z = (vInverseMatrix.m20 * vx + vInverseMatrix.m21 * vy + vInverseMatrix.m22 * vz + vInverseMatrix.m23 * 1);
+            return new Vector3((float)(x), (float)(y), (float)(z));
+        }
+
+        public Vector3 WorldToScreenPoint(Vector3 worldPos) {
+            double worldX = worldPos.x;
+            double worldY = worldPos.y;
+            double worldZ = worldPos.z;
+
+            //世界空间到观察空间
+            Matrix4x4 vMatrix = mMapCamera.worldToCameraMatrix;
+            double vx = (vMatrix.m00 * worldX + vMatrix.m01 * worldY + vMatrix.m02 * worldZ + vMatrix.m03 * 1);
+            double vy = (vMatrix.m10 * worldX + vMatrix.m11 * worldY + vMatrix.m12 * worldZ + vMatrix.m13 * 1);
+            double vz = (vMatrix.m20 * worldX + vMatrix.m21 * worldY + vMatrix.m22 * worldZ + vMatrix.m23 * 1);
+            //相机空间到裁剪空间
+            Matrix4x4 pMatrix = mMapCamera.projectionMatrix;
+            double px = (pMatrix.m00 * vx + pMatrix.m01 * vy + pMatrix.m02 * vz + pMatrix.m03 * 1);
+            double py = (pMatrix.m10 * vx + pMatrix.m11 * vy + pMatrix.m12 * vz + pMatrix.m13 * 1);
+            double pz = (pMatrix.m20 * vx + pMatrix.m21 * vy + pMatrix.m22 * vz + pMatrix.m23 * 1);
+            double pw = (pMatrix.m30 * vx + pMatrix.m31 * vy + pMatrix.m32 * vz + pMatrix.m33 * 1);
+            //齐次除法
+            double x = px / pw;
+            double y = py / pw;
+
+            //转到0-1的范围
+            x = (x * 0.5) + 0.5;
+            y = (y * 0.5) + 0.5;
+            return new Vector3((float)(x * Screen.width), (float)(y * Screen.height), (float)(-vz));
+        }
+
+
         public Vector3 TileData2WorldPos(TileData tileData) {
             Vector2D lngLat = MapFunction.Tile2LngLat(tileData);
             return LngLat2WorldPos(lngLat);
@@ -212,6 +307,19 @@ namespace Achonor.LBSMap {
             Vector2D lngLat = WorldPos2LngLat(worldPos);
             return MapFunction.LngLat2Tile(lngLat, zoom);
         }
+
+        /// <summary>
+        /// 当前地图的缩放比例
+        /// </summary>
+        /// <returns></returns>
+        public float GetMapScale() {
+            return MapFunction.GetCameraMoveScale(mMapZoomLevel);
+        }
+
+        public float GetTileScale() {
+            return MapFunction.GetTileScale((int)mMapZoomLevel);
+        }
+
 
         private MapTile GetMapTile(TileData tileData) {
             if (mMapTileDict.ContainsKey(tileData.Key)) {
