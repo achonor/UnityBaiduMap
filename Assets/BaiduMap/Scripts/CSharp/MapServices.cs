@@ -15,23 +15,43 @@ namespace Achonor.LBSMap {
         private Transform mTilePool;
 
         private MapType mMapType;
+        /// <summary>
+        /// 相机的旋转值
+        /// </summary>
+        private Vector2 mCameraRotate = new Vector2(0, 0);
 
         /// <summary>
         /// 显示范围
         /// </summary>
-        private Rect mLngLatRange = new Rect(-180f, -74f, 180f, 74f);
+        private Rect mLngLatRange = new Rect(70f, 0f, 150f, 55f);
         private Rect mWorldPosRange = new Rect();
+
+        /// <summary>
+        /// 相机旋转X轴的范围Min
+        /// </summary>
+        private float mCameraRotateMinX = -60;
+        /// <summary>
+        /// 相机旋转X轴的范围Max
+        /// </summary>
+        private float mCameraRotateMaxX = 60;
+
 
         private Dictionary<string, MapTile> mMapTileDict = new Dictionary<string, MapTile>();
 
         /// <summary>
         /// 最小缩放等级
         /// </summary>
-        private static int MIN_ZOOM_LEVEL = 4;
+        private static int MIN_ZOOM_LEVEL = 6;
+
+        /// <summary>
+        /// 最大的缩放等级，超过后仍然可以缩放，是指不替换图片了
+        /// </summary>
+        private static int MAX_TILE_ZOOM_LEVEL = 19;
         /// <summary>
         /// 最大缩放等级
         /// </summary>
-        private static int MAX_ZOOM_LEVEL = 19;
+        private static int MAX_ZOOM_LEVEL = 22;
+
 
         /// <summary>
         /// 当前地图缩放级别
@@ -46,6 +66,10 @@ namespace Achonor.LBSMap {
         /// 最大缓存容量
         /// </summary>
         private long mMaxChacheSize = 500 * 1024 * 1024;
+        /// <summary>
+        /// 同屏最多显示的数量
+        /// </summary>
+        private int mMaxTileCount = 30;
 
         public Camera MapCamera {
             get {
@@ -59,10 +83,18 @@ namespace Achonor.LBSMap {
             }
         }
 
+        public int MapTileZoomLevel {
+            get {
+                return (int)Mathf.Clamp(mMapZoomLevel, MIN_ZOOM_LEVEL, MAX_TILE_ZOOM_LEVEL);
+            }
+        }
+
         private void Start() {
             SetLngLatRange(mLngLatRange);
             //检测缓存容量是否超出
             CheckCahcheSize();
+            //启动缓存池
+            StartCoroutine(MapTexturePool.StartPool());
         }
 
         /// <summary>
@@ -107,6 +139,14 @@ namespace Achonor.LBSMap {
         /// <param name="lngLat">BD09ll坐标系</param>
         public void SetMapCenter(Vector2D lngLat) {
             mCenterLngLat = lngLat;
+            //相机坐标
+            Vector3 centerPos = LngLat2WorldPos(mCenterLngLat);
+            //相机高度
+            Vector3 heightVec = new Vector3(0, (float)MapFunction.GetCameraHeight(mMapZoomLevel), 0);
+            Vector3 cameraPos = centerPos + heightVec;
+            mMapCamera.transform.position = cameraPos;
+            UpdateCameraTransform(Vector3.zero);
+            DoRender();
         }
 
         /// <summary>
@@ -116,6 +156,7 @@ namespace Achonor.LBSMap {
         public void ZoomMap(float zoom) {
             mMapZoomLevel += zoom;
             mMapZoomLevel = Mathf.Clamp(mMapZoomLevel, MIN_ZOOM_LEVEL, MAX_ZOOM_LEVEL);
+            UpdateCameraTransform(Vector3.zero);
         }
 
         /// <summary>
@@ -132,70 +173,116 @@ namespace Achonor.LBSMap {
         /// </summary>
         /// <param name="offset">屏幕像素单位</param>
         public void MoveMap(Vector2 offset) {
-            //相机位置
-            Vector3 vector = new Vector3(offset.x, 0, offset.y) ;
-            Vector3 worldOffset = transform.TransformPoint(vector * MapFunction.GetCameraMoveScale(mMapZoomLevel));
-            mMapCamera.transform.position -= worldOffset;
-            //判断移动是否超出范围
-            Vector3 nextCameraPos = mMapCamera.transform.position;
-            Vector3 leftDownWorldPos = ScreenToWorldPoint(new Vector3(0, 0));
-            Vector3 rightUpWorldPos = ScreenToWorldPoint(new Vector3(Screen.width, Screen.height));
-            if (leftDownWorldPos.x < mWorldPosRange.x) {
-                nextCameraPos.x += mWorldPosRange.x - leftDownWorldPos.x;
-            } else if (mWorldPosRange.width < rightUpWorldPos.x) {
-                nextCameraPos.x += mWorldPosRange.width - rightUpWorldPos.x;
+            UpdateCameraTransform(offset);
+        }
+
+        public void RotateMap(Vector2 offset) {
+            mCameraRotate += offset;
+            mCameraRotate.x = Mathf.Clamp(mCameraRotate.x, mCameraRotateMinX, mCameraRotateMaxX);
+            UpdateCameraTransform(Vector3.zero);
+        }
+
+        public void UpdateCameraTransform(Vector3 posOffset) {
+            //-----------------------计算位置-----------------------//
+            if (0 != posOffset.x || 0 != posOffset.y) {
+                //相机位置
+                Vector3 vector = new Vector3(posOffset.x, posOffset.y, 0);
+                Vector3 worldOffset = mMapCamera.transform.TransformDirection(vector) * MapFunction.GetMapScale(mMapZoomLevel);
+                worldOffset.y = 0;
+                mMapCamera.transform.position -= worldOffset;
+                //判断移动是否超出范围
+                Vector3 nextCameraPos = mMapCamera.transform.position;
+                Vector3 leftDownWorldPos = ScreenToWorldPoint(new Vector3(0, 0));
+                Vector3 rightUpWorldPos = ScreenToWorldPoint(new Vector3(Screen.width, Screen.height));
+                if (leftDownWorldPos.x < mWorldPosRange.x) {
+                    nextCameraPos.x += mWorldPosRange.x - leftDownWorldPos.x;
+                } else if (mWorldPosRange.width < rightUpWorldPos.x) {
+                    nextCameraPos.x += mWorldPosRange.width - rightUpWorldPos.x;
+                }
+                if (leftDownWorldPos.z < mWorldPosRange.y) {
+                    nextCameraPos.z += mWorldPosRange.y - leftDownWorldPos.z;
+                } else if (mWorldPosRange.height < rightUpWorldPos.z) {
+                    nextCameraPos.z += mWorldPosRange.height - rightUpWorldPos.z;
+                }
+                mMapCamera.transform.position = nextCameraPos;
+                float camera2CenterDistance = (float)MapFunction.GetCameraHeight(mMapZoomLevel);
+                Vector3 centerWorldPos = mMapCamera.ScreenToWorldPoint(new Vector3(0.5f * Screen.width, 0.5f * Screen.height, camera2CenterDistance));
+                //计算中心经纬度
+                mCenterLngLat = WorldPos2LngLat(centerWorldPos);
             }
-            if (leftDownWorldPos.z < mWorldPosRange.y) {
-                nextCameraPos.z += mWorldPosRange.y - leftDownWorldPos.z;
-            } else if (mWorldPosRange.height < rightUpWorldPos.z) {
-                nextCameraPos.z += mWorldPosRange.height - rightUpWorldPos.z;
+            //-----------------------计算旋转-----------------------//
+            //中心坐标
+            Vector3 centerPos = LngLat2WorldPos(mCenterLngLat);
+            //相机未旋转时在中心点空间下的坐标
+            Vector3 heightVec = new Vector3(0, (float)MapFunction.GetCameraHeight(mMapZoomLevel), 0);
+            //旋转矩阵
+            Matrix4x4 rotateMatrix = Matrix4x4.Rotate(Quaternion.Euler(mCameraRotate.x, mCameraRotate.y, 0));
+            //相机在中心的空间下的坐标
+            Vector3 cameraPos = rotateMatrix.MultiplyVector(heightVec);
+            //转到世界坐标
+            cameraPos += centerPos;
+            mMapCamera.transform.position = cameraPos;
+            //朝向中心点，先计算up向量
+            float angle = Vector3.Angle(-heightVec, centerPos - cameraPos);
+            if (Mathf.Abs(angle) <= 0.001f) {
+                Vector3 lastUp = mMapCamera.transform.TransformDirection(Vector3.up);
+                mMapCamera.transform.LookAt(centerPos, lastUp);
+            } else if (0 < mCameraRotate.x) {
+                mMapCamera.transform.LookAt(centerPos, -Vector3.up);
+            } else {
+                mMapCamera.transform.LookAt(centerPos, Vector3.up);
             }
-            mMapCamera.transform.position = nextCameraPos;
-            //计算中心经纬度
-            mCenterLngLat = WorldPos2LngLat(mMapCamera.transform.position);
         }
 
         /// <summary>
         /// 渲染地图
         /// </summary>
         public void DoRender() {
-            //相机坐标
             Vector3 centerPos = LngLat2WorldPos(mCenterLngLat);
-            //相机高度
-            Vector3 heightVec = new Vector3(0, (float)MapFunction.GetCameraHeight(mMapZoomLevel), 0);
-            Vector3 cameraPos = centerPos + heightVec;
-            mMapCamera.transform.position = cameraPos;
+            float camera2CenterDistance = (float)MapFunction.GetCameraHeight(mMapZoomLevel);
             //计算相机范围
-            Vector3 leftDownWorldPos = ScreenToWorldPoint(new Vector3(-0.1f * Screen.width, -0.1f * Screen.height, heightVec.y));
-            Vector3 rightUpWorldPos = ScreenToWorldPoint(new Vector3(1.1f * Screen.width, 1.1f * Screen.height, heightVec.y));
+            Vector3 cameraPos = mMapCamera.transform.position;
+            //计算相机从屏幕左下角发出的射线和地图层的交点（计算直线和面的交点）
+            Vector3 leftDownWorldPos = ScreenToWorldPoint(new Vector3(-0.1f * Screen.width, -0.1f * Screen.height, 1));
+            Vector3 leftDownDir = (leftDownWorldPos - cameraPos);
+            leftDownWorldPos = MapFunction.CalcLineAndPlanePoint(cameraPos, leftDownDir, centerPos, Vector3.up);
+            //有哪些Tile要加入
             TileData leftDownTile = WorldPos2TileData(leftDownWorldPos);
-            TileData rightUpTile = WorldPos2TileData(rightUpWorldPos);
+            TileData centerTile = WorldPos2TileData(centerPos);
             List<TileData> allTileDatas = new List<TileData>();
-            for (int i = leftDownTile.tile.x; i <= rightUpTile.tile.x; i++) {
-                for (int k = leftDownTile.tile.y; k <= rightUpTile.tile.y; k++) {
-                    allTileDatas.Add(new TileData((int)mMapZoomLevel, i, k));
+            int minX = Mathf.Min(leftDownTile.tile.x, centerTile.tile.x);
+            int maxX = Mathf.Max(leftDownTile.tile.x, centerTile.tile.x);
+            int minY = Mathf.Min(leftDownTile.tile.y, centerTile.tile.y);
+            int maxY = Mathf.Max(leftDownTile.tile.y, centerTile.tile.y);
+
+            for (int i = 0; i <= (maxX - minX) * 2.5f; i++) {
+                for (int k = 0; k <= (maxY - minY) * 2.5f; k++) {
+                    allTileDatas.Add(new TileData(MapTileZoomLevel, minX + i, minY + k));
                 }
             }
-            //中心Tile
-            TileData centerTileData = WorldPos2TileData(centerPos);
             //按照距离排序，距离近的优先加载
             allTileDatas.Sort((tileData1, tileData2)=> {
-                double distance1 = centerTileData.Distance(tileData1);
-                double distance2 = centerTileData.Distance(tileData2);
+                double distance1 = centerTile.Distance(tileData1);
+                double distance2 = centerTile.Distance(tileData2);
                 if (distance1.DoubleIsEqual(distance2)) {
                     return 0;
                 }
                 return distance1 < distance2 ? -1 : 1;
             });
+            //最大数量
+            while (mMaxTileCount < allTileDatas.Count) {
+                allTileDatas.RemoveAt(allTileDatas.Count - 1);
+            }
             for (int i = 0; i < allTileDatas.Count; i++) {
                 MapTile mapTile = GetMapTile(allTileDatas[i]);
+                mapTile.gameObject.name = mapTile.Data.Key;
                 mapTile.transform.position = TileData2WorldPos(allTileDatas[i]);
             }
             //清理距离远的Tile
             if (0 < allTileDatas.Count) {
                 TileData maxDisTile = allTileDatas[allTileDatas.Count - 1];
-                double maxDistance = maxDisTile.Distance(centerTileData);
-                ClearMapTile(centerTileData, maxDistance);
+                double maxDistance = maxDisTile.Distance(centerTile);
+                ClearMapTile(centerTile, maxDistance);
             }
         }
 
@@ -302,7 +389,7 @@ namespace Achonor.LBSMap {
 
         public TileData WorldPos2TileData(Vector3 worldPos, int zoom = -1) {
             if (-1 == zoom){
-                zoom = (int)mMapZoomLevel;   
+                zoom = MapTileZoomLevel;   
             }
             Vector2D lngLat = WorldPos2LngLat(worldPos);
             return MapFunction.LngLat2Tile(lngLat, zoom);
@@ -313,7 +400,7 @@ namespace Achonor.LBSMap {
         /// </summary>
         /// <returns></returns>
         public float GetMapScale() {
-            return MapFunction.GetCameraMoveScale(mMapZoomLevel);
+            return MapFunction.GetMapScale(mMapZoomLevel);
         }
 
         public float GetTileScale() {
@@ -348,7 +435,7 @@ namespace Achonor.LBSMap {
         private void ClearMapTile(TileData centerTileData, double maxDistance) {
             List<MapTile> needClears = new List<MapTile>();
             foreach (MapTile mapTile in mMapTileDict.Values) {
-                if (2 <= Mathf.Abs((int)mMapZoomLevel - mapTile.Data.zoom)) {
+                if (1 <= Mathf.Abs(MapTileZoomLevel - mapTile.Data.zoom)) {
                     needClears.Add(mapTile);
                 }
                 if (2 * maxDistance < mapTile.Data.Distance(centerTileData)) {
@@ -375,8 +462,8 @@ namespace Achonor.LBSMap {
 
         private void CheckCahcheSize() {
             long curChacheSize = 0;
-            print(MapHttpTools.MapTileCachePath);
-            string cachePath = MapHttpTools.MapTileCachePath;
+            print(MapTexturePool.MapTileCachePath);
+            string cachePath = MapTexturePool.MapTileCachePath;
             if (!Directory.Exists(cachePath)) {
                 return;
             }

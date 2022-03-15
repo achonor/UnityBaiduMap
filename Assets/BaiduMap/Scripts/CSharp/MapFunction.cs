@@ -7,13 +7,23 @@ using UnityEngine;
 namespace Achonor.LBSMap {
 
     public static class MapFunction {
-
+        public static double DZero = 1e-8;
+        private static float[] WORLD_POS_OFFSET = new float[] { 49123.18f, 12696.32f };
         //街道图
         //public const string MapUrlSrc_0 = "https://maponline0.bdimg.com/starpic/?qt=satepc&u=x={0};y={1};z={2};v=009;type=sate&fm=46&app=webearth2&v=009&udt=20210112";
         public const string MapUrlSrc_0 = "http://online5.map.bdimg.com/tile/?qt=vtile&x={0}&y={1}&z={2}&styles=pl&udt=20210114";
         //卫星图
         public const string MapUrlSrc_1 = "http://shangetu3.map.bdimg.com/it/u=x={0};y={1};z={2};v=009;type=sate&fm=46&udt=20210114";
 
+        private static void CalcWorldPosOffset(ref Vector3 worldPos, bool isAdd = false) {
+            if (isAdd) {
+                worldPos.x += WORLD_POS_OFFSET[0];
+                worldPos.y += WORLD_POS_OFFSET[1];
+            } else {
+                worldPos.x -= WORLD_POS_OFFSET[0];
+                worldPos.y -= WORLD_POS_OFFSET[1];
+            }
+        }
 
         /// <summary>
         /// 定义10级Tile比例为1
@@ -37,14 +47,17 @@ namespace Achonor.LBSMap {
         }
 
         /// <summary>
-        /// 获取相机移动距离相对屏幕的比例
+        /// 获取地图比例
         /// </summary>
         /// <param name="zoom"></param>
         /// <returns></returns>
-        public static float GetCameraMoveScale(float zoom) {
+        public static float GetMapScale(float zoom) {
             return Mathf.Pow(2, 10 - zoom);
         }
 
+        public static bool DEquals(this double a, double b) {
+            return a == b || Math.Abs(a - b) <= DZero;
+        }
 
         /// <summary>
         /// 将LngLat地理坐标系转换为tile瓦片坐标系
@@ -115,8 +128,10 @@ namespace Achonor.LBSMap {
         public static Vector3 LngLat2Position(Vector2D lngLat) {
             //转换MC坐标
             Vector2D vector2D = MCTransform.ConvertLL2MC(lngLat);
-            //缩小到Unit单位范围内（-100000, 100000） 
-            return new Vector2((float)(vector2D.x / 256), (float)(vector2D.y / 256));
+            //缩小到Unit单位范围内（-100000, 100000)
+            Vector3 worldPos = new Vector3((float)(vector2D.x / 256), (float)(vector2D.y / 256));
+            CalcWorldPosOffset(ref worldPos);
+            return worldPos;
         }
 
         /// <summary>
@@ -125,9 +140,8 @@ namespace Achonor.LBSMap {
         /// <param name="worldPos"></param>
         /// <returns></returns>
         public static Vector2D Position2LngLat(Vector3 worldPos) {
-            Vector2D vector2D = new Vector2D(worldPos.x * 256, worldPos.y * 256);
-
-
+            CalcWorldPosOffset(ref worldPos, true);
+            Vector2D vector2D = new Vector2D(worldPos.x * 256.0, worldPos.y * 256.0);
             return MCTransform.ConvertMC2LL(vector2D);
         }
 
@@ -184,6 +198,19 @@ namespace Achonor.LBSMap {
             result.longitude = z * Math.Cos(theta);
             result.latitude = z * Math.Sin(theta);
             return result;
+        }
+
+        /// <summary>
+        /// 计算直线和平面的交点
+        /// </summary>
+        /// <param name="linePoint">直线上一点，不能在平面上</param>
+        /// <param name="lineDir">直线的方向向量，不能和平面平行</param>
+        /// <param name="planePoint">平面上一点</param>
+        /// <param name="planeNormal">平面的法向量</param>
+        /// <returns></returns>
+        public static Vector3 CalcLineAndPlanePoint(Vector3 linePoint, Vector3 lineDir, Vector3 planePoint, Vector3 planeNormal) {
+            float length = Vector3.Dot(planePoint - linePoint, planeNormal) / Vector3.Dot(lineDir, planeNormal);
+            return linePoint + length * lineDir;
         }
     }
 }

@@ -54,21 +54,19 @@ namespace Achonor.LBSMap {
             new List<double>(){ -10018863.186153628, -5854020.8290309776, 10018863.184586093, 6237052.0870710611 }
         };
 
-        private static Double[] MCBAND = { 12890594.86, 8362377.87, 5591021d, 3481989.83, 1678043.12, 0d };
+        private static double[] MCBAND = { 12890594.86, 8362377.87, 5591021d, 3481989.83, 1678043.12, 0d };
         private static int[] LLBAND = { 75, 60, 45, 30, 15, 0 };
 
         private static Vector2D Convertor(double longitude, double latitude, double[] cg) {
             if (cg == null) {
-                return null;
+                return Vector2D.Infinity;
             }
             double t = cg[0] + cg[1] * Math.Abs(longitude);
             double ce = Math.Abs(latitude) / cg[9];
             double ch = cg[2] + cg[3] * ce + cg[4] * Math.Pow(ce, 2) + cg[5] * Math.Pow(ce, 3) + cg[6] * Math.Pow(ce, 4) + cg[7] * Math.Pow(ce, 5) + cg[8] * Math.Pow(ce, 6);
             t = t * (longitude < 0 ? -1 : 1);
             ch = ch * (latitude < 0 ? -1 : 1);
-
-            var re = new Vector2D(t, ch);
-            return re;
+            return new Vector2D(t, ch);
         }
 
         /// <summary>

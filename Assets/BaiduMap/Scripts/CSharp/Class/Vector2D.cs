@@ -1,11 +1,12 @@
-﻿using System.Collections;
+﻿using Achonor.LBSMap;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class Vector2D {
+public struct Vector2D {
+    public static Vector2D Infinity = new Vector2D(double.PositiveInfinity, double.PositiveInfinity);
     public double x;
     public double y;
-
     public double longitude {
         get {
             return x;
@@ -23,11 +24,6 @@ public class Vector2D {
         }
     }
 
-    public Vector2D() {
-        x = 0;
-        y = 0;
-    }
-
     public Vector2D(double _x, double _y) {
         x = _x;
         y = _y;
@@ -40,6 +36,12 @@ public class Vector2D {
 
     public override string ToString() {
         return string.Format("{0},{1}", x, y);
+    }
+    public static bool operator ==(Vector2D self, Vector2D value) {
+        return self.x.DEquals(value.x) && self.y.DEquals(value.y);
+    }
+    public static bool operator !=(Vector2D self, Vector2D value) {
+        return (!self.x.DEquals(value.x)) || (!self.y.DEquals(value.y));
     }
 
     public static Vector2D operator *(Vector2D self, double value) {

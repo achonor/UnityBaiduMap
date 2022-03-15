@@ -1,8 +1,10 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
 namespace Achonor.LBSMap {
+    [Serializable]
     public class TileData {
         /// <summary>
         /// 缩放级别

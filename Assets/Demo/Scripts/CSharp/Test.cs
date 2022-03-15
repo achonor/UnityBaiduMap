@@ -34,6 +34,14 @@ public class Test : MonoBehaviour
             mMapServices.DoRender();
         }, this);
 
+        EventManager.Register((TouchRotateEvent param) => {
+            mMapServices.RotateMap(param.ChangedEuler);
+        }, this);
+
+        EventManager.Register((TouchRotatedEvent param) => {
+            mMapServices.DoRender();
+        }, this);
+
         mStreetBtn.onClick.AddListener(() => {
             SetMapType(MapType.Street);
             mMapServices.DoRender();
